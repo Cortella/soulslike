@@ -13,7 +13,7 @@ using UnityEditor.SceneManagement;
 public class SoulslikeSceneSetup : MonoBehaviour
 {
 #if UNITY_EDITOR
-    [MenuItem("Soulslike/Configurar Cena Completa")]
+    [MenuItem("Soulslike/Dungeon/Configurar Cena Completa")]
     public static void SetupScene()
     {
         // Confirmar
@@ -333,7 +333,7 @@ public class SoulslikeSceneSetup : MonoBehaviour
 
     // ========== UTILIDADES EXTRAS ==========
 
-    [MenuItem("Soulslike/Regenerar Dungeon (Nova Seed)")]
+    [MenuItem("Soulslike/Dungeon/Regenerar Dungeon (Nova Seed)")]
     public static void RegenerateDungeon()
     {
         DungeonGenerator gen = FindFirstObjectByType<DungeonGenerator>();
@@ -355,7 +355,7 @@ public class SoulslikeSceneSetup : MonoBehaviour
         }
     }
 
-    [MenuItem("Soulslike/Limpar Cena")]
+    [MenuItem("Soulslike/Dungeon/Limpar Cena Dungeon")]
     public static void CleanScene()
     {
         ClearScene();
