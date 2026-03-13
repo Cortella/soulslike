@@ -92,20 +92,20 @@ public class AtmosphereSetup : MonoBehaviour
         switch (preset)
         {
             case AtmospherePreset.DarkForest:
-                // Atmosfera sombria da floresta
-                vignette.intensity.value = 0.4f;
-                vignette.smoothness.value = 0.5f;
-                colorAdj.postExposure.value = -0.3f;
-                colorAdj.contrast.value = 20f;
-                colorAdj.saturation.value = -15f;
-                colorAdj.colorFilter.value = new Color(0.85f, 0.9f, 0.8f); // Tom esverdeado
-                lgg.lift.value = new Vector4(0f, 0.02f, 0.01f, -0.05f); // Sombras azuladas
-                lgg.gamma.value = new Vector4(0f, 0f, 0f, -0.05f);
-                lgg.gain.value = new Vector4(0.02f, 0f, -0.02f, 0f); // Highlights quentes
-                bloom.intensity.value = 0.6f;
+                // Atmosfera florestal - visível mas atmosférica
+                vignette.intensity.value = 0.2f;
+                vignette.smoothness.value = 0.4f;
+                colorAdj.postExposure.value = 0.5f;
+                colorAdj.contrast.value = 15f;
+                colorAdj.saturation.value = -5f;
+                colorAdj.colorFilter.value = new Color(0.9f, 0.95f, 0.85f);
+                lgg.lift.value = new Vector4(0f, 0.01f, 0.005f, 0f);
+                lgg.gamma.value = new Vector4(0f, 0f, 0f, 0f);
+                lgg.gain.value = new Vector4(0.01f, 0f, -0.01f, 0f);
+                bloom.intensity.value = 0.8f;
                 filmGrain.type.value = FilmGrainLookup.Thin1;
-                filmGrain.intensity.value = 0.2f;
-                chrAb.intensity.value = 0.05f;
+                filmGrain.intensity.value = 0.1f;
+                chrAb.intensity.value = 0.03f;
                 break;
 
             case AtmospherePreset.BossArena:
@@ -188,11 +188,11 @@ public class AtmosphereSetup : MonoBehaviour
             mainLight.type = LightType.Directional;
         }
 
-        mainLight.transform.rotation = Quaternion.Euler(35f, -30f, 0f);
-        mainLight.color = new Color(0.95f, 0.88f, 0.7f); // Sol filtrado por árvores
-        mainLight.intensity = 1.2f;
+        mainLight.transform.rotation = Quaternion.Euler(40f, -30f, 0f);
+        mainLight.color = new Color(1f, 0.95f, 0.85f);
+        mainLight.intensity = 2.5f;
         mainLight.shadows = LightShadows.Soft;
-        mainLight.shadowStrength = 0.85f;
+        mainLight.shadowStrength = 0.6f;
         mainLight.shadowBias = 0.05f;
         mainLight.shadowNormalBias = 0.4f;
 

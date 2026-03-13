@@ -59,15 +59,25 @@ public class ForestMapGenerator : MonoBehaviour
     public List<Vector3> EnemySpawnPositions { get; private set; } = new List<Vector3>();
     public List<Vector3> PathPoints { get; private set; } = new List<Vector3>();
 
+    [HideInInspector]
+    public bool generatedInEditor = false;
+
     private void Awake()
     {
-        if (useRandomSeed) seed = Random.Range(0, 99999);
+        if (!generatedInEditor)
+        {
+            if (useRandomSeed) seed = Random.Range(0, 99999);
+        }
         Random.InitState(seed);
     }
 
     private void Start()
     {
-        GenerateForest();
+        // Não regenerar se já foi gerado pelo editor
+        if (!generatedInEditor)
+        {
+            GenerateForest();
+        }
     }
 
     public void GenerateForest()

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using Unity.AI.Navigation;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -47,9 +48,8 @@ public class ForestSceneSetup : MonoBehaviour
         ForestMapGenerator forest = forestObj.AddComponent<ForestMapGenerator>();
 
         // Configurar parâmetros
-        forest.terrainWidth = 512;
+        forest.terrainSize = 512;
         forest.terrainHeight = 80;
-        forest.terrainLength = 512;
         forest.treeCount = 600;
         forest.rockCount = 120;
         forest.ruinCount = 8;
@@ -57,6 +57,7 @@ public class ForestSceneSetup : MonoBehaviour
 
         // Gerar o mapa
         forest.GenerateForest();
+        forest.generatedInEditor = true;
 
         // === 3. NAVMESH ===
         EditorUtility.DisplayProgressBar("Gerando Floresta...", "Baking NavMesh...", 0.4f);
@@ -131,7 +132,7 @@ public class ForestSceneSetup : MonoBehaviour
         float elapsed = (float)EditorApplication.timeSinceStartup - startTime;
         
         Debug.Log($"=== FLORESTA SOMBRIA GERADA EM {elapsed:F1}s ===");
-        Debug.Log($"    Terreno: {forest.terrainWidth}x{forest.terrainLength}");
+        Debug.Log($"    Terreno: {forest.terrainSize}x{forest.terrainSize}");
         Debug.Log($"    Árvores: ~{forest.treeCount}");
         Debug.Log($"    Rochas: ~{forest.rockCount}");
         Debug.Log($"    Ruínas: {forest.ruinCount}");
@@ -176,18 +177,17 @@ public class ForestSceneSetup : MonoBehaviour
     private static void SetupForestRenderSettings()
     {
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.15f, 0.18f, 0.12f);
-        RenderSettings.ambientEquatorColor = new Color(0.08f, 0.1f, 0.06f);
-        RenderSettings.ambientGroundColor = new Color(0.04f, 0.05f, 0.03f);
+        RenderSettings.ambientSkyColor = new Color(0.45f, 0.5f, 0.4f);
+        RenderSettings.ambientEquatorColor = new Color(0.3f, 0.35f, 0.25f);
+        RenderSettings.ambientGroundColor = new Color(0.15f, 0.18f, 0.12f);
 
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogColor = new Color(0.18f, 0.2f, 0.14f, 1f); // Neblina esverdeada
-        RenderSettings.fogDensity = 0.008f;
+        RenderSettings.fogColor = new Color(0.4f, 0.45f, 0.35f, 1f);
+        RenderSettings.fogDensity = 0.003f;
 
-        // Skybox - usar gradiente se disponível, senão cor sólida
-        RenderSettings.skybox = null; // Sem skybox material por enquanto
-        RenderSettings.subtractiveShadowColor = new Color(0.2f, 0.18f, 0.15f);
+        RenderSettings.skybox = null;
+        RenderSettings.subtractiveShadowColor = new Color(0.3f, 0.28f, 0.25f);
     }
 
     private static void SetupNavMesh(GameObject parent)

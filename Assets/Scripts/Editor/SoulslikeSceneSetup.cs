@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using Unity.AI.Navigation;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
