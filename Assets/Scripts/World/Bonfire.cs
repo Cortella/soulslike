@@ -43,6 +43,16 @@ public class Bonfire : MonoBehaviour
         // TODO: Respawnar inimigos, salvar progresso, etc.
     }
 
+    /// <summary>
+    /// Chamado externamente (ex: DirectInputHandler) para interagir com a bonfire.
+    /// </summary>
+    public void Interact(GameObject interactor)
+    {
+        if (!isLit) return;
+        PlayerController pc = interactor.GetComponent<PlayerController>();
+        if (pc != null) RestAtBonfire(pc);
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);

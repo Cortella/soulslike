@@ -708,8 +708,9 @@ public class LiurniaMapGenerator : MonoBehaviour
     {
         EnemySpawnPositions.Clear();
 
-        BossArenaCenter = TerrainNormToWorld(0.5f, 0.88f);
-        BossArenaCenter.y = GetTerrainHeight(BossArenaCenter) + 1f;
+        Vector3 bossPos = TerrainNormToWorld(0.5f, 0.88f);
+        bossPos.y = GetTerrainHeight(bossPos) + 1f;
+        BossArenaCenter = bossPos;
 
         // Inimigos perto das ruínas
         foreach (var ruinPos in RuinPositions)

@@ -20,27 +20,27 @@ public class InputHandler : MonoBehaviour
 
     public void OnMove(InputAction.CallbackContext context)
     {
-        playerController?.OnMove(context);
+        playerController?.SetMoveInput(context.ReadValue<Vector2>());
     }
 
     public void OnRun(InputAction.CallbackContext context)
     {
-        playerController?.OnRun(context);
+        playerController?.SetRunning(context.performed);
     }
 
     public void OnDodge(InputAction.CallbackContext context)
     {
-        playerController?.OnDodge(context);
+        if (context.performed) playerController?.TryDodge();
     }
 
     public void OnJump(InputAction.CallbackContext context)
     {
-        playerController?.OnJump(context);
+        if (context.performed) playerController?.TryJump();
     }
 
     public void OnLockOn(InputAction.CallbackContext context)
     {
-        playerController?.OnLockOn(context);
+        if (context.performed) playerController?.TryToggleLockOn();
     }
 
     public void OnLightAttack(InputAction.CallbackContext context)

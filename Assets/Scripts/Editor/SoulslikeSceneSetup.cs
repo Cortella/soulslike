@@ -172,11 +172,11 @@ public class SoulslikeSceneSetup : MonoBehaviour
         capsule.radius = 0.4f;
         capsule.center = Vector3.up * 1f;
 
-        PhysicMaterial noFriction = new PhysicMaterial("PlayerPhysMat");
+        PhysicsMaterial noFriction = new PhysicsMaterial("PlayerPhysMat");
         noFriction.dynamicFriction = 0f;
         noFriction.staticFriction = 0f;
         noFriction.bounciness = 0f;
-        noFriction.frictionCombine = PhysicMaterialCombine.Minimum;
+        noFriction.frictionCombine = PhysicsMaterialCombine.Minimum;
         capsule.material = noFriction;
 
         // Scripts

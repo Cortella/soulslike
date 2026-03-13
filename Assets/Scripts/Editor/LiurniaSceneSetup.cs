@@ -213,11 +213,11 @@ public class LiurniaSceneSetup : MonoBehaviour
         capsule.center = new Vector3(0, 0.9f, 0);
 
         // Sem fricção
-        PhysicMaterial noFriction = new PhysicMaterial("PlayerPhysMat");
+        PhysicsMaterial noFriction = new PhysicsMaterial("PlayerPhysMat");
         noFriction.dynamicFriction = 0f;
         noFriction.staticFriction = 0f;
         noFriction.bounciness = 0f;
-        noFriction.frictionCombine = PhysicMaterialCombine.Minimum;
+        noFriction.frictionCombine = PhysicsMaterialCombine.Minimum;
         capsule.material = noFriction;
 
         // Modelo visual
