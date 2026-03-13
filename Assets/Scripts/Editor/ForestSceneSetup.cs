@@ -17,20 +17,23 @@ public class ForestSceneSetup : MonoBehaviour
     [MenuItem("Soulslike/Configurar Floresta Sombria")]
     public static void SetupForestScene()
     {
-        if (!EditorUtility.DisplayDialog("Soulslike - Floresta Sombria",
-            "Isso vai criar a cena completa da floresta com:\n\n" +
-            "■ Terreno com heightmap procedural\n" +
-            "■ 600+ árvores (5 espécies)\n" +
-            "■ 120+ rochas e 8 ruínas\n" +
-            "■ Player Cavaleiro com espada e escudo\n" +
-            "■ 12 inimigos Hollow\n" +
-            "■ Fogueira (bonfire)\n" +
-            "■ Pós-processamento atmosférico\n" +
+        if (!EditorUtility.DisplayDialog("Soulslike - Floresta Sombria (Next-Gen)",
+            "Isso vai criar a cena completa da floresta com qualidade Next-Gen:\n\n" +
+            "■ URP Maximizado (Sombras 4K, MSAA 4x, HDR 64bit)\n" +
+            "■ Terreno com texturas 1024x1024 + Normal Maps\n" +
+            "■ 600+ árvores com mesh real (5 espécies)\n" +
+            "■ 120+ rochas, 8 ruínas\n" +
+            "■ 400 patches de grama 3D\n" +
+            "■ 80 cogumelos (alguns bioluminescentes)\n" +
+            "■ 150 pedras detalhadas com deformação\n" +
+            "■ 60 clusters de raízes\n" +
+            "■ Player Cavaleiro HQ com texturas metálicas\n" +
+            "■ 12 inimigos Hollow com olhos emissivos\n" +
+            "■ Pós-processamento Next-Gen (ACES, Bloom, Vignette)\n" +
+            "■ Iluminação com fill light + sombras VeryHigh\n" +
             "■ Neblina, vagalumes, folhas caindo\n" +
-            "■ Iluminação florestal\n" +
-            "■ NavMesh para IA\n" +
-            "■ HUD completa\n\n" +
-            "A cena atual será limpa. Continuar?", "Gerar Floresta", "Cancelar"))
+            "■ NavMesh para IA + HUD completa\n\n" +
+            "A cena atual será limpa. Continuar?", "Gerar Floresta Next-Gen", "Cancelar"))
             return;
 
         float startTime = (float)EditorApplication.timeSinceStartup;
@@ -38,9 +41,17 @@ public class ForestSceneSetup : MonoBehaviour
         EditorUtility.DisplayProgressBar("Gerando Floresta...", "Limpando cena...", 0f);
         ClearScene();
 
+        // === 0. MAXIMIZAR QUALIDADE URP ===
+        EditorUtility.DisplayProgressBar("Gerando Floresta...", "Maximizando qualidade URP (Next-Gen)...", 0.02f);
+        URPQualityMaximizer.MaximizeURPQuality();
+
         // === 1. RENDER SETTINGS ===
         EditorUtility.DisplayProgressBar("Gerando Floresta...", "Configurando render...", 0.05f);
         SetupForestRenderSettings();
+
+        // Inicializar materiais HQ
+        HighQualityKnightGenerator.InitMaterials();
+        HighQualityTreeGenerator.InitMaterials();
 
         // === 2. TERRENO + ÁRVORES + ROCHAS ===
         EditorUtility.DisplayProgressBar("Gerando Floresta...", "Gerando terreno e árvores (pode levar um momento)...", 0.1f);
@@ -58,6 +69,16 @@ public class ForestSceneSetup : MonoBehaviour
         // Gerar o mapa
         forest.GenerateForest();
         forest.generatedInEditor = true;
+
+        // === 2.5 DETALHES AMBIENTAIS (grama, cogumelos, raízes, pedras) ===
+        EditorUtility.DisplayProgressBar("Gerando Floresta...", "Espalhando detalhes ambientais...", 0.3f);
+        Terrain terrainForDetails = FindFirstObjectByType<Terrain>();
+        if (terrainForDetails != null)
+        {
+            EnvironmentDetailsGenerator.InitMaterials();
+            GameObject envDetails = EnvironmentDetailsGenerator.GenerateDetails(
+                terrainForDetails, 300, 60, 120, 50);
+        }
 
         // === 3. NAVMESH ===
         EditorUtility.DisplayProgressBar("Gerando Floresta...", "Baking NavMesh...", 0.4f);
@@ -177,17 +198,23 @@ public class ForestSceneSetup : MonoBehaviour
     private static void SetupForestRenderSettings()
     {
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.45f, 0.5f, 0.4f);
-        RenderSettings.ambientEquatorColor = new Color(0.3f, 0.35f, 0.25f);
-        RenderSettings.ambientGroundColor = new Color(0.15f, 0.18f, 0.12f);
+        RenderSettings.ambientSkyColor = new Color(0.55f, 0.6f, 0.5f);
+        RenderSettings.ambientEquatorColor = new Color(0.38f, 0.42f, 0.3f);
+        RenderSettings.ambientGroundColor = new Color(0.2f, 0.22f, 0.15f);
 
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogColor = new Color(0.4f, 0.45f, 0.35f, 1f);
-        RenderSettings.fogDensity = 0.003f;
+        RenderSettings.fogColor = new Color(0.38f, 0.42f, 0.32f, 1f);
+        RenderSettings.fogDensity = 0.002f;
 
         RenderSettings.skybox = null;
         RenderSettings.subtractiveShadowColor = new Color(0.3f, 0.28f, 0.25f);
+
+        // Configurar qualidade de sombras global
+        QualitySettings.shadows = ShadowQuality.All;
+        QualitySettings.shadowDistance = 200f;
+        QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
+        QualitySettings.shadowCascades = 4;
     }
 
     private static void SetupNavMesh(GameObject parent)
@@ -218,8 +245,8 @@ public class ForestSceneSetup : MonoBehaviour
         cc.slopeLimit = 45f;
         cc.stepOffset = 0.4f;
 
-        // Modelo visual do cavaleiro
-        GameObject knightModel = ProceduralKnightFactory.CreateKnight(Vector3.zero);
+        // Modelo visual do cavaleiro (mesh HQ com texturas)
+        GameObject knightModel = HighQualityKnightGenerator.CreateKnight(Vector3.zero);
         knightModel.transform.SetParent(player.transform);
         knightModel.transform.localPosition = Vector3.zero;
         knightModel.transform.localRotation = Quaternion.identity;
@@ -337,8 +364,8 @@ public class ForestSceneSetup : MonoBehaviour
                 col.radius = 0.35f;
                 col.center = new Vector3(0, 0.9f, 0);
 
-                // Modelo visual Hollow
-                GameObject hollowModel = ProceduralKnightFactory.CreateHollow(Vector3.zero);
+                // Modelo visual Hollow (mesh HQ)
+                GameObject hollowModel = HighQualityKnightGenerator.CreateHollow(Vector3.zero);
                 hollowModel.transform.SetParent(enemy.transform);
                 hollowModel.transform.localPosition = Vector3.zero;
 

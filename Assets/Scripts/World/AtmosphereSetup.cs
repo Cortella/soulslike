@@ -190,16 +190,26 @@ public class AtmosphereSetup : MonoBehaviour
 
         mainLight.transform.rotation = Quaternion.Euler(40f, -30f, 0f);
         mainLight.color = new Color(1f, 0.95f, 0.85f);
-        mainLight.intensity = 2.5f;
+        mainLight.intensity = 2.8f;
         mainLight.shadows = LightShadows.Soft;
-        mainLight.shadowStrength = 0.6f;
-        mainLight.shadowBias = 0.05f;
-        mainLight.shadowNormalBias = 0.4f;
+        mainLight.shadowStrength = 0.7f;
+        mainLight.shadowBias = 0.02f;
+        mainLight.shadowNormalBias = 0.3f;
+        mainLight.shadowResolution = UnityEngine.Rendering.LightShadowResolution.VeryHigh;
 
         // URP Additional Light Data
         var urpLight = mainLight.GetComponent<UniversalAdditionalLightData>();
         if (urpLight == null)
             urpLight = mainLight.gameObject.AddComponent<UniversalAdditionalLightData>();
+
+        // Adicionar luz de preenchimento (fill light) para reduzir áreas totalmente escuras
+        GameObject fillLightObj = new GameObject("FillLight_Sky");
+        Light fillLight = fillLightObj.AddComponent<Light>();
+        fillLight.type = LightType.Directional;
+        fillLight.transform.rotation = Quaternion.Euler(70f, 150f, 0f);
+        fillLight.color = new Color(0.55f, 0.65f, 0.75f);
+        fillLight.intensity = 0.5f;
+        fillLight.shadows = LightShadows.None;
 
         return mainLight;
     }

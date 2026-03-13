@@ -302,32 +302,40 @@ public class ForestMapGenerator : MonoBehaviour
 
     private void CreateTerrainLayers()
     {
-        Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
-        if (urpLit == null) urpLit = Shader.Find("Standard");
+        // Usar texturas procedurais de alta qualidade (1024x1024)
+        Texture2D grassTex = ProceduralTextureGenerator.GenerateGrassTexture();
+        Texture2D grassNormal = ProceduralTextureGenerator.GenerateNormalMap(grassTex, 2f);
 
-        // Criar texturas procedurais
-        Texture2D grassTex = GenerateNoiseTexture(256, new Color(0.08f, 0.15f, 0.04f), new Color(0.05f, 0.1f, 0.03f));
-        Texture2D dirtTex = GenerateNoiseTexture(256, new Color(0.15f, 0.1f, 0.06f), new Color(0.1f, 0.07f, 0.04f));
-        Texture2D rockTex = GenerateNoiseTexture(256, new Color(0.25f, 0.23f, 0.2f), new Color(0.18f, 0.16f, 0.14f));
-        Texture2D mossTex = GenerateNoiseTexture(256, new Color(0.06f, 0.18f, 0.04f), new Color(0.04f, 0.12f, 0.03f));
+        Texture2D dirtTex = ProceduralTextureGenerator.GenerateDirtTexture();
+        Texture2D dirtNormal = ProceduralTextureGenerator.GenerateNormalMap(dirtTex, 2.5f);
+
+        Texture2D rockTex = ProceduralTextureGenerator.GenerateRockTexture();
+        Texture2D rockNormal = ProceduralTextureGenerator.GenerateNormalMap(rockTex, 3f);
+
+        Texture2D mossTex = ProceduralTextureGenerator.GenerateForestFloorTexture();
+        Texture2D mossNormal = ProceduralTextureGenerator.GenerateNormalMap(mossTex, 1.5f);
 
         TerrainLayer grassLayer = new TerrainLayer();
         grassLayer.diffuseTexture = grassTex;
+        grassLayer.normalMapTexture = grassNormal;
         grassLayer.tileSize = new Vector2(10, 10);
         grassLayer.name = "Grass";
 
         TerrainLayer dirtLayer = new TerrainLayer();
         dirtLayer.diffuseTexture = dirtTex;
+        dirtLayer.normalMapTexture = dirtNormal;
         dirtLayer.tileSize = new Vector2(8, 8);
         dirtLayer.name = "Dirt";
 
         TerrainLayer rockLayer = new TerrainLayer();
         rockLayer.diffuseTexture = rockTex;
+        rockLayer.normalMapTexture = rockNormal;
         rockLayer.tileSize = new Vector2(12, 12);
         rockLayer.name = "Rock";
 
         TerrainLayer mossLayer = new TerrainLayer();
         mossLayer.diffuseTexture = mossTex;
+        mossLayer.normalMapTexture = mossNormal;
         mossLayer.tileSize = new Vector2(6, 6);
         mossLayer.name = "Moss";
 
@@ -514,11 +522,12 @@ public class ForestMapGenerator : MonoBehaviour
         treesParent.transform.SetParent(mapParent.transform);
         treesParent.isStatic = true;
 
+        // Inicializar materiais HQ
+        HighQualityTreeGenerator.InitMaterials();
+
         List<Vector3> placedPositions = new List<Vector3>();
         int attempts = 0;
         int maxAttempts = treeCount * 5;
-
-        Material[] leavesOptions = { leavesMaterial, darkLeavesMaterial };
 
         while (placedPositions.Count < treeCount && attempts < maxAttempts)
         {
@@ -564,49 +573,29 @@ public class ForestMapGenerator : MonoBehaviour
                     break;
                 }
             }
-            if (nearPath && Random.value > 0.15f) continue; // 85% chance de pular perto do caminho
+            if (nearPath && Random.value > 0.15f) continue;
 
-            // Escolher estilo de árvore
-            ProceduralTreeFactory.TreeStyle style;
+            // Escolher estilo de árvore (0-4)
             float styleRoll = Random.value;
-            if (styleRoll < 0.35f) style = ProceduralTreeFactory.TreeStyle.Oak;
-            else if (styleRoll < 0.55f) style = ProceduralTreeFactory.TreeStyle.Pine;
-            else if (styleRoll < 0.7f) style = ProceduralTreeFactory.TreeStyle.TallPine;
-            else if (styleRoll < 0.85f) style = ProceduralTreeFactory.TreeStyle.Willow;
-            else style = ProceduralTreeFactory.TreeStyle.DeadTree;
+            int style;
+            if (styleRoll < 0.35f) style = 0;       // Oak
+            else if (styleRoll < 0.55f) style = 1;  // Pine
+            else if (styleRoll < 0.7f) style = 2;   // TallPine
+            else if (styleRoll < 0.85f) style = 4;  // Willow
+            else style = 3;                          // DeadTree
 
-            // Criar árvore
+            // Criar árvore com mesh real HQ
             int treeSeed = Random.Range(0, 99999);
-            GameObject tree = ProceduralTreeFactory.CreateTree(worldPos, treeSeed, style);
+            GameObject tree = HighQualityTreeGenerator.CreateTree(worldPos, style, treeSeed);
             tree.transform.SetParent(treesParent.transform);
 
             // Rotação aleatória
             tree.transform.rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
 
-            // Escala aleatória
-            float scaleVar = Random.Range(0.7f, 1.4f);
-            tree.transform.localScale = Vector3.one * scaleVar;
-
-            // Material
-            Material leafMat = style == ProceduralTreeFactory.TreeStyle.DeadTree
-                ? deadLeavesMaterial
-                : leavesOptions[Random.Range(0, leavesOptions.Length)];
-            ProceduralTreeFactory.ApplyMaterials(tree, trunkMaterial, leafMat);
-
-            // Collider no tronco (apenas o tronco principal)
-            Transform trunkTransform = tree.transform.Find("Trunk");
-            if (trunkTransform != null)
-            {
-                CapsuleCollider capsule = trunkTransform.gameObject.AddComponent<CapsuleCollider>();
-                capsule.radius = 0.3f * scaleVar;
-                capsule.height = 4f * scaleVar;
-                capsule.center = Vector3.zero;
-            }
-
             placedPositions.Add(worldPos);
         }
 
-        Debug.Log($"[Forest] {placedPositions.Count} árvores colocadas.");
+        Debug.Log($"[Forest] {placedPositions.Count} árvores HQ colocadas.");
     }
 
     #endregion
