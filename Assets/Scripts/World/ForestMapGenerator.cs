@@ -302,44 +302,44 @@ public class ForestMapGenerator : MonoBehaviour
 
     private void CreateTerrainLayers()
     {
-        // Usar texturas procedurais de alta qualidade (1024x1024)
-        Texture2D grassTex = ProceduralTextureGenerator.GenerateGrassTexture();
-        Texture2D grassNormal = ProceduralTextureGenerator.GenerateNormalMap(grassTex, 2f);
+        // Texturas RDR2 — fazenda com terra seca e pedras
+        Texture2D driedGrassTex = ProceduralTextureGenerator.GenerateDriedGrassTexture();
+        Texture2D driedGrassNormal = ProceduralTextureGenerator.GenerateNormalMap(driedGrassTex, 1.5f);
 
-        Texture2D dirtTex = ProceduralTextureGenerator.GenerateDirtTexture();
-        Texture2D dirtNormal = ProceduralTextureGenerator.GenerateNormalMap(dirtTex, 2.5f);
+        Texture2D dryDirtTex = ProceduralTextureGenerator.GenerateDryDirtWithRocksTexture();
+        Texture2D dryDirtNormal = ProceduralTextureGenerator.GenerateNormalMap(dryDirtTex, 2.5f);
 
-        Texture2D rockTex = ProceduralTextureGenerator.GenerateRockTexture();
-        Texture2D rockNormal = ProceduralTextureGenerator.GenerateNormalMap(rockTex, 3f);
+        Texture2D gravelTex = ProceduralTextureGenerator.GenerateGravelTexture();
+        Texture2D gravelNormal = ProceduralTextureGenerator.GenerateNormalMap(gravelTex, 3f);
 
-        Texture2D mossTex = ProceduralTextureGenerator.GenerateForestFloorTexture();
-        Texture2D mossNormal = ProceduralTextureGenerator.GenerateNormalMap(mossTex, 1.5f);
+        Texture2D sandyPathTex = ProceduralTextureGenerator.GenerateSandyPathTexture();
+        Texture2D sandyPathNormal = ProceduralTextureGenerator.GenerateNormalMap(sandyPathTex, 1.5f);
 
-        TerrainLayer grassLayer = new TerrainLayer();
-        grassLayer.diffuseTexture = grassTex;
-        grassLayer.normalMapTexture = grassNormal;
-        grassLayer.tileSize = new Vector2(10, 10);
-        grassLayer.name = "Grass";
+        TerrainLayer driedGrassLayer = new TerrainLayer();
+        driedGrassLayer.diffuseTexture = driedGrassTex;
+        driedGrassLayer.normalMapTexture = driedGrassNormal;
+        driedGrassLayer.tileSize = new Vector2(10, 10);
+        driedGrassLayer.name = "DriedGrass";
 
-        TerrainLayer dirtLayer = new TerrainLayer();
-        dirtLayer.diffuseTexture = dirtTex;
-        dirtLayer.normalMapTexture = dirtNormal;
-        dirtLayer.tileSize = new Vector2(8, 8);
-        dirtLayer.name = "Dirt";
+        TerrainLayer dryDirtLayer = new TerrainLayer();
+        dryDirtLayer.diffuseTexture = dryDirtTex;
+        dryDirtLayer.normalMapTexture = dryDirtNormal;
+        dryDirtLayer.tileSize = new Vector2(8, 8);
+        dryDirtLayer.name = "DryDirtRocks";
 
-        TerrainLayer rockLayer = new TerrainLayer();
-        rockLayer.diffuseTexture = rockTex;
-        rockLayer.normalMapTexture = rockNormal;
-        rockLayer.tileSize = new Vector2(12, 12);
-        rockLayer.name = "Rock";
+        TerrainLayer gravelLayer = new TerrainLayer();
+        gravelLayer.diffuseTexture = gravelTex;
+        gravelLayer.normalMapTexture = gravelNormal;
+        gravelLayer.tileSize = new Vector2(12, 12);
+        gravelLayer.name = "Gravel";
 
-        TerrainLayer mossLayer = new TerrainLayer();
-        mossLayer.diffuseTexture = mossTex;
-        mossLayer.normalMapTexture = mossNormal;
-        mossLayer.tileSize = new Vector2(6, 6);
-        mossLayer.name = "Moss";
+        TerrainLayer sandyPathLayer = new TerrainLayer();
+        sandyPathLayer.diffuseTexture = sandyPathTex;
+        sandyPathLayer.normalMapTexture = sandyPathNormal;
+        sandyPathLayer.tileSize = new Vector2(6, 6);
+        sandyPathLayer.name = "SandyPath";
 
-        terrainData.terrainLayers = new TerrainLayer[] { grassLayer, dirtLayer, rockLayer, mossLayer };
+        terrainData.terrainLayers = new TerrainLayer[] { driedGrassLayer, dryDirtLayer, gravelLayer, sandyPathLayer };
     }
 
     private Material CreateTerrainMaterial()
@@ -360,7 +360,8 @@ public class ForestMapGenerator : MonoBehaviour
     private void PaintTerrain()
     {
         int alphaRes = terrainData.alphamapResolution;
-        float[,,] alphaMap = new float[alphaRes, alphaRes, 4]; // 4 layers
+        float[,,] alphaMap = new float[alphaRes, alphaRes, 4];
+        // Layers: 0=DriedGrass, 1=DryDirtRocks, 2=Gravel, 3=SandyPath
 
         for (int z = 0; z < alphaRes; z++)
         {
@@ -369,61 +370,57 @@ public class ForestMapGenerator : MonoBehaviour
                 float nx = (float)x / alphaRes;
                 float nz = (float)z / alphaRes;
 
-                // Pegar hauteur normalizada nesse ponto
                 float h = terrainData.GetHeight(
                     (int)(nx * terrainData.heightmapResolution),
                     (int)(nz * terrainData.heightmapResolution)) / terrainHeight;
 
-                // Pegar steepness (inclinação)
                 float steepness = terrainData.GetSteepness(nx, nz) / 90f;
 
-                // Calcular pesos das texturas
-                float grass = 1f;
-                float dirt = 0f;
-                float rock = 0f;
-                float moss = 0f;
+                // Base: dried grass everywhere (RDR2 prairie feel)
+                float driedGrass = 1f;
+                float dryDirt = 0f;
+                float gravel = 0f;
+                float sandyPath = 0f;
 
-                // Partes íngremes = rocha
-                if (steepness > 0.4f)
+                // Slopes = gravel/rocks
+                if (steepness > 0.3f)
                 {
-                    rock = (steepness - 0.4f) / 0.3f;
-                    grass -= rock;
+                    gravel = (steepness - 0.3f) / 0.25f;
+                    driedGrass -= gravel;
                 }
 
-                // Altitudes altas = mais rocha
-                if (h > 0.25f)
+                // Higher altitudes = more rocks/gravel
+                if (h > 0.22f)
                 {
-                    float rockBlend = (h - 0.25f) / 0.15f;
-                    rock = Mathf.Max(rock, rockBlend);
-                    grass = Mathf.Max(0, grass - rockBlend * 0.7f);
+                    float rockBlend = (h - 0.22f) / 0.15f;
+                    gravel = Mathf.Max(gravel, rockBlend);
+                    driedGrass = Mathf.Max(0, driedGrass - rockBlend * 0.6f);
                 }
 
-                // Baixadas = dirt + moss
-                if (h < 0.1f)
+                // Low areas = dry dirt with rocks
+                if (h < 0.12f)
                 {
-                    dirt = (0.1f - h) / 0.08f;
-                    moss = dirt * 0.5f;
-                    grass -= (dirt + moss) * 0.8f;
+                    dryDirt = (0.12f - h) / 0.1f;
+                    driedGrass -= dryDirt * 0.7f;
                 }
 
-                // Noise para variação natural
-                float noiseMoss = Mathf.PerlinNoise(nx * 30 + seed, nz * 30) * 0.3f;
-                moss += noiseMoss;
-                grass -= noiseMoss * 0.5f;
+                // Natural noise variation — patches of dirt through grass
+                float noiseDirt = Mathf.PerlinNoise(nx * 15 + seed, nz * 15) * 0.35f;
+                float noiseGravel = Mathf.PerlinNoise(nx * 25 + seed * 2, nz * 25) * 0.15f;
+                dryDirt += noiseDirt;
+                gravel += noiseGravel;
+                driedGrass -= (noiseDirt + noiseGravel) * 0.5f;
 
-                float noiseDirt = Mathf.PerlinNoise(nx * 20 + seed * 2, nz * 20) * 0.2f;
-                dirt += noiseDirt;
-                grass -= noiseDirt * 0.5f;
-
-                // Normalizar
-                grass = Mathf.Max(0, grass);
-                float total = grass + dirt + rock + moss;
+                // Normalize
+                driedGrass = Mathf.Max(0, driedGrass);
+                dryDirt = Mathf.Max(0, dryDirt);
+                float total = driedGrass + dryDirt + gravel + sandyPath;
                 if (total > 0)
                 {
-                    alphaMap[z, x, 0] = grass / total;
-                    alphaMap[z, x, 1] = dirt / total;
-                    alphaMap[z, x, 2] = rock / total;
-                    alphaMap[z, x, 3] = moss / total;
+                    alphaMap[z, x, 0] = driedGrass / total;
+                    alphaMap[z, x, 1] = dryDirt / total;
+                    alphaMap[z, x, 2] = gravel / total;
+                    alphaMap[z, x, 3] = sandyPath / total;
                 }
                 else
                 {
@@ -498,11 +495,11 @@ public class ForestMapGenerator : MonoBehaviour
                             float blend = 1f - (dist / radius);
                             blend = blend * blend; // Quadrático para borda suave
 
-                            // Misturar com dirt
-                            alphaMap[z, x, 0] = Mathf.Lerp(alphaMap[z, x, 0], 0.1f, blend * 0.7f);
-                            alphaMap[z, x, 1] = Mathf.Lerp(alphaMap[z, x, 1], 0.8f, blend * 0.7f);
+                            // Misturar com sandy path (layer 3) — trilha de fazenda
+                            alphaMap[z, x, 0] = Mathf.Lerp(alphaMap[z, x, 0], 0.05f, blend * 0.7f);
+                            alphaMap[z, x, 1] = Mathf.Lerp(alphaMap[z, x, 1], 0.15f, blend * 0.5f);
                             alphaMap[z, x, 2] = Mathf.Lerp(alphaMap[z, x, 2], 0f, blend * 0.5f);
-                            alphaMap[z, x, 3] = Mathf.Lerp(alphaMap[z, x, 3], 0.1f, blend * 0.3f);
+                            alphaMap[z, x, 3] = Mathf.Lerp(alphaMap[z, x, 3], 0.8f, blend * 0.7f);
                         }
                     }
                 }

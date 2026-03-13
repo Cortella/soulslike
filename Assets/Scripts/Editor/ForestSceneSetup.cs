@@ -17,23 +17,19 @@ public class ForestSceneSetup : MonoBehaviour
     [MenuItem("Soulslike/Configurar Floresta Sombria")]
     public static void SetupForestScene()
     {
-        if (!EditorUtility.DisplayDialog("Soulslike - Floresta Sombria (Next-Gen)",
-            "Isso vai criar a cena completa da floresta com qualidade Next-Gen:\n\n" +
-            "■ URP Maximizado (Sombras 4K, MSAA 4x, HDR 64bit)\n" +
-            "■ Terreno com texturas 1024x1024 + Normal Maps\n" +
-            "■ 600+ árvores com mesh real (5 espécies)\n" +
-            "■ 120+ rochas, 8 ruínas\n" +
-            "■ 400 patches de grama 3D\n" +
-            "■ 80 cogumelos (alguns bioluminescentes)\n" +
-            "■ 150 pedras detalhadas com deformação\n" +
-            "■ 60 clusters de raízes\n" +
-            "■ Player Cavaleiro HQ com texturas metálicas\n" +
-            "■ 12 inimigos Hollow com olhos emissivos\n" +
-            "■ Pós-processamento Next-Gen (ACES, Bloom, Vignette)\n" +
-            "■ Iluminação com fill light + sombras VeryHigh\n" +
-            "■ Neblina, vagalumes, folhas caindo\n" +
-            "■ NavMesh para IA + HUD completa\n\n" +
-            "A cena atual será limpa. Continuar?", "Gerar Floresta Next-Gen", "Cancelar"))
+        if (!EditorUtility.DisplayDialog("Soulslike - Fazenda Sombria (RDR2 Style)",
+            "Cena com terreno estilo Red Dead Redemption 2:\n\n" +
+            "■ URP Maximizado + GPU Instancing\n" +
+            "■ Terreno 256m: terra seca, pedras, grama morta\n" +
+            "■ 200 árvores, 60 rochas, 4 ruínas\n" +
+            "■ Grama 3D, pedras detalhadas\n" +
+            "■ Player Cavaleiro (WASD para andar!)\n" +
+            "■ 8 Skeletons Lv1 + 4 Hollows\n" +
+            "■ GPU: Instancing + Static Batching + Mesh Combining\n" +
+            "■ Pós-processamento (ACES, Bloom)\n" +
+            "■ Neblina, vagalumes, folhas\n" +
+            "■ NavMesh + HUD\n\n" +
+            "A cena atual será limpa. Continuar?", "Gerar Mapa", "Cancelar"))
             return;
 
         float startTime = (float)EditorApplication.timeSinceStartup;
@@ -58,12 +54,12 @@ public class ForestSceneSetup : MonoBehaviour
         GameObject forestObj = new GameObject("ForestMapGenerator");
         ForestMapGenerator forest = forestObj.AddComponent<ForestMapGenerator>();
 
-        // Configurar parâmetros
-        forest.terrainSize = 512;
-        forest.terrainHeight = 80;
-        forest.treeCount = 600;
-        forest.rockCount = 120;
-        forest.ruinCount = 8;
+        // Configurar parâmetros (reduzidos para performance)
+        forest.terrainSize = 256;
+        forest.terrainHeight = 40;
+        forest.treeCount = 200;
+        forest.rockCount = 60;
+        forest.ruinCount = 4;
         forest.useRandomSeed = true;
 
         // Gerar o mapa
@@ -77,7 +73,7 @@ public class ForestSceneSetup : MonoBehaviour
         {
             EnvironmentDetailsGenerator.InitMaterials();
             GameObject envDetails = EnvironmentDetailsGenerator.GenerateDetails(
-                terrainForDetails, 300, 60, 120, 50);
+                terrainForDetails, 150, 30, 80, 30);
         }
 
         // === 3. NAVMESH ===
@@ -100,7 +96,7 @@ public class ForestSceneSetup : MonoBehaviour
         EditorUtility.DisplayProgressBar("Gerando Floresta...", "Configurando câmera...", 0.6f);
         SetupCamera(player);
 
-        // === 6. INIMIGOS HOLLOW ===
+        // === 6. INIMIGOS (Skeletons Lv1 + Hollows) ===
         EditorUtility.DisplayProgressBar("Gerando Floresta...", "Spawnando inimigos...", 0.7f);
         SpawnForestEnemies(forest, terrain);
 
@@ -111,19 +107,19 @@ public class ForestSceneSetup : MonoBehaviour
 
         // === 8. PARTÍCULAS AMBIENTAIS ===
         EditorUtility.DisplayProgressBar("Gerando Floresta...", "Adicionando efeitos ambientais...", 0.85f);
-        Vector3 forestCenter = new Vector3(256, 0, 256);
+        Vector3 forestCenter = new Vector3(128, 0, 128);
         if (terrain != null)
             forestCenter.y = terrain.SampleHeight(forestCenter) + terrain.transform.position.y;
 
         GameObject ambientParent = new GameObject("=== AMBIENT EFFECTS ===");
         
-        GameObject fog = AtmosphereSetup.CreateFogParticles(forestCenter, 180f);
+        GameObject fog = AtmosphereSetup.CreateFogParticles(forestCenter, 80f);
         fog.transform.SetParent(ambientParent.transform);
 
-        GameObject fireflies = AtmosphereSetup.CreateFireflies(forestCenter, 150f);
+        GameObject fireflies = AtmosphereSetup.CreateFireflies(forestCenter, 70f);
         fireflies.transform.SetParent(ambientParent.transform);
 
-        GameObject leaves = AtmosphereSetup.CreateFallingLeaves(forestCenter, 180f);
+        GameObject leaves = AtmosphereSetup.CreateFallingLeaves(forestCenter, 80f);
         leaves.transform.SetParent(ambientParent.transform);
 
         // === 9. HUD ===
@@ -145,6 +141,19 @@ public class ForestSceneSetup : MonoBehaviour
             gm.AddComponent<GameManager>();
         }
 
+        // === 12. GPU OPTIMIZATION ===
+        EditorUtility.DisplayProgressBar("Gerando Floresta...", "Otimizando GPU rendering...", 0.95f);
+        int gpuMats = GPURenderOptimizer.EnableGPUInstancingAll();
+        int staticObjs = GPURenderOptimizer.MarkStaticsAll();
+        int combined = GPURenderOptimizer.CombineStaticMeshes();
+        GPURenderOptimizer.ConfigureQualityForPerformance();
+        GPURenderOptimizer.OptimizeLighting();
+        GPURenderOptimizer.OptimizeCamera();
+
+        // Adicionar optimizer para runtime
+        GameObject optObj = new GameObject("GPURenderOptimizer");
+        optObj.AddComponent<GPURenderOptimizer>();
+
         EditorUtility.ClearProgressBar();
 
         // === FINALIZAR ===
@@ -160,8 +169,9 @@ public class ForestSceneSetup : MonoBehaviour
         Debug.Log($"    Inimigos: ~12");
 
         EditorUtility.DisplayDialog("Floresta Sombria Criada!",
-            $"A floresta foi gerada com sucesso em {elapsed:F1}s!\n\n" +
+            $"Floresta gerada em {elapsed:F1}s!\n\n" +
             "★ Pressione PLAY para explorar ★\n\n" +
+            $"GPU: {gpuMats} materiais instanciados, {staticObjs} objetos static, {combined} meshes combinados\n\n" +
             "Controles:\n" +
             "  WASD = Mover\n" +
             "  Shift = Correr\n" +
@@ -169,9 +179,10 @@ public class ForestSceneSetup : MonoBehaviour
             "  Click Esq = Ataque Leve\n" +
             "  Click Dir = Bloquear\n" +
             "  Espaço = Dodge Roll\n" +
-            "  Tab = Lock-On\n" +
+            "  Tab/Q = Lock-On\n" +
+            "  F = Pular\n" +
             "  E = Interagir (Fogueira)\n\n" +
-            "Dica: Navegue pela Scene View para ver o mapa completo!", "Explorar!");
+            "Terreno estilo Red Dead Redemption 2!", "Explorar!");
 
         // Focar na posição do player na Scene View
         SceneView sv = SceneView.lastActiveSceneView;
@@ -197,23 +208,24 @@ public class ForestSceneSetup : MonoBehaviour
 
     private static void SetupForestRenderSettings()
     {
+        // RDR2-style: warm, dusty, open ranch
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.55f, 0.6f, 0.5f);
-        RenderSettings.ambientEquatorColor = new Color(0.38f, 0.42f, 0.3f);
-        RenderSettings.ambientGroundColor = new Color(0.2f, 0.22f, 0.15f);
+        RenderSettings.ambientSkyColor = new Color(0.65f, 0.6f, 0.5f);    // Warm sky
+        RenderSettings.ambientEquatorColor = new Color(0.5f, 0.45f, 0.35f); // Dusty
+        RenderSettings.ambientGroundColor = new Color(0.3f, 0.25f, 0.18f);  // Dirt
 
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogColor = new Color(0.38f, 0.42f, 0.32f, 1f);
-        RenderSettings.fogDensity = 0.002f;
+        RenderSettings.fogColor = new Color(0.55f, 0.5f, 0.4f, 1f); // Dusty/warm
+        RenderSettings.fogDensity = 0.0015f; // Lighter for open area
 
         RenderSettings.skybox = null;
-        RenderSettings.subtractiveShadowColor = new Color(0.3f, 0.28f, 0.25f);
+        RenderSettings.subtractiveShadowColor = new Color(0.35f, 0.3f, 0.22f);
 
-        // Configurar qualidade de sombras global
+        // Quality for performance
         QualitySettings.shadows = ShadowQuality.All;
-        QualitySettings.shadowDistance = 200f;
-        QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
+        QualitySettings.shadowDistance = 120f;
+        QualitySettings.shadowResolution = ShadowResolution.High;
         QualitySettings.shadowCascades = 4;
     }
 
@@ -255,6 +267,9 @@ public class ForestSceneSetup : MonoBehaviour
         PlayerStats stats = player.AddComponent<PlayerStats>();
         PlayerController controller = player.AddComponent<PlayerController>();
         PlayerCombat combat = player.AddComponent<PlayerCombat>();
+
+        // Direct Input Handler (lê WASD/Mouse direto, sem precisar de PlayerInput asset)
+        player.AddComponent<DirectInputHandler>();
 
         // Attack Point
         GameObject attackPoint = new GameObject("AttackPoint");
@@ -320,28 +335,25 @@ public class ForestSceneSetup : MonoBehaviour
         GameObject enemiesParent = new GameObject("=== ENEMIES ===");
         int spawned = 0;
 
-        // Posições dos inimigos ao longo do caminho 
-        // (entre spawn e boss arena para que o jogador os encontre naturalmente)
+        // Inicializar materiais de skeleton
+        SkeletonGenerator.InitMaterials();
+
         Vector3 spawnPos = forest.PlayerSpawnPosition;
         Vector3 bossPos = forest.BossArenaCenter;
         
         if (bossPos == Vector3.zero)
             bossPos = new Vector3(400, 0, 400);
 
-        float pathLength = Vector3.Distance(spawnPos, bossPos);
-
         // Spawn 12 inimigos em posições estratégicas
         for (int i = 0; i < 12; i++)
         {
-            float t = (i + 1f) / 13f; // distribuir ao longo do caminho
+            float t = (i + 1f) / 13f;
             Vector3 basePos = Vector3.Lerp(spawnPos, bossPos, t);
 
-            // Offset lateral aleatório (para não ficar em fila)
             float lateralOffset = Random.Range(-20f, 20f);
             Vector3 perpDir = Vector3.Cross((bossPos - spawnPos).normalized, Vector3.up);
             Vector3 enemyPos = basePos + perpDir * lateralOffset;
 
-            // Ajustar Y ao terreno
             if (terrain != null)
             {
                 enemyPos.x = Mathf.Clamp(enemyPos.x, 30f, 480f);
@@ -349,55 +361,68 @@ public class ForestSceneSetup : MonoBehaviour
                 enemyPos.y = terrain.SampleHeight(enemyPos) + terrain.transform.position.y + 0.1f;
             }
 
-            // Verificar NavMesh
             if (NavMesh.SamplePosition(enemyPos, out NavMeshHit hit, 15f, NavMesh.AllAreas))
             {
-                // Criar inimigo com modelo Hollow
-                GameObject enemy = new GameObject($"Enemy_Hollow_{spawned}");
+                // Primeiros 8 = Skeletons Lv1, últimos 4 = Hollows (mais fortes)
+                bool isSkeleton = (i < 8);
+                string prefix = isSkeleton ? "Skeleton" : "Hollow";
+
+                GameObject enemy = new GameObject($"Enemy_{prefix}_{spawned}");
                 enemy.transform.position = hit.position;
                 enemy.transform.SetParent(enemiesParent.transform);
                 enemy.tag = "Enemy";
 
-                // Capsule collider para físicas
                 CapsuleCollider col = enemy.AddComponent<CapsuleCollider>();
                 col.height = 1.8f;
                 col.radius = 0.35f;
                 col.center = new Vector3(0, 0.9f, 0);
 
-                // Modelo visual Hollow (mesh HQ)
-                GameObject hollowModel = HighQualityKnightGenerator.CreateHollow(Vector3.zero);
-                hollowModel.transform.SetParent(enemy.transform);
-                hollowModel.transform.localPosition = Vector3.zero;
+                // Modelo visual
+                GameObject model;
+                if (isSkeleton)
+                    model = SkeletonGenerator.CreateSkeleton(Vector3.zero);
+                else
+                    model = HighQualityKnightGenerator.CreateHollow(Vector3.zero);
 
-                // NavMeshAgent
+                model.transform.SetParent(enemy.transform);
+                model.transform.localPosition = Vector3.zero;
+
                 NavMeshAgent agent = enemy.AddComponent<NavMeshAgent>();
                 agent.speed = 3f;
                 agent.stoppingDistance = 1.8f;
                 agent.radius = 0.35f;
                 agent.height = 1.8f;
 
-                // Stats (variam conforme posição - mais fortes mais longe)
                 EnemyStats stats = enemy.AddComponent<EnemyStats>();
-                float difficulty = t; // 0 a 1
-                stats.maxHealth = Mathf.Lerp(50f, 120f, difficulty);
-                stats.attackDamage = Mathf.Lerp(10f, 25f, difficulty);
-                stats.soulsReward = Mathf.RoundToInt(Mathf.Lerp(30, 120, difficulty));
+                float difficulty = t;
 
-                // IA
+                if (isSkeleton)
+                {
+                    // Skeleton Lv1 — mais fraco
+                    stats.maxHealth = Mathf.Lerp(30f, 60f, difficulty);
+                    stats.attackDamage = Mathf.Lerp(8f, 15f, difficulty);
+                    stats.soulsReward = Mathf.RoundToInt(Mathf.Lerp(20, 60, difficulty));
+                }
+                else
+                {
+                    // Hollow — mais forte
+                    stats.maxHealth = Mathf.Lerp(80f, 120f, difficulty);
+                    stats.attackDamage = Mathf.Lerp(15f, 25f, difficulty);
+                    stats.soulsReward = Mathf.RoundToInt(Mathf.Lerp(60, 120, difficulty));
+                }
+
                 EnemyAI ai = enemy.AddComponent<EnemyAI>();
                 ai.detectionRange = Mathf.Lerp(8f, 14f, difficulty);
                 ai.attackRange = 2f;
                 ai.patrolSpeed = 2f;
                 ai.chaseSpeed = Mathf.Lerp(3.5f, 5f, difficulty);
 
-                // HP bar
                 enemy.AddComponent<EnemyHealthBar>();
-
                 spawned++;
             }
         }
 
-        Debug.Log($"[Forest Setup] {spawned} Hollows spawnados na floresta.");
+        Debug.Log($"[Forest Setup] {spawned} inimigos spawnados (Skeletons Lv1 + Hollows).");
     }
 
     private static void CreateHUD()

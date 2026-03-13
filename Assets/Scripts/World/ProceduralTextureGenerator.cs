@@ -386,4 +386,233 @@ public static class ProceduralTextureGenerator
         Color c = pixels[y * w + x];
         return c.r * 0.299f + c.g * 0.587f + c.b * 0.114f;
     }
+
+    // =================== RDR2 STYLE TEXTURES ====================
+
+    /// <summary>
+    /// Terra seca com pedras — estilo fazenda Red Dead Redemption 2.
+    /// Cor predominante marrom/bege com pedregulhos cinza.
+    /// </summary>
+    public static Texture2D GenerateDryDirtWithRocksTexture()
+    {
+        Texture2D tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, true);
+        tex.name = "T_DryDirt_RDR2";
+        Color baseDirt = new Color(0.42f, 0.34f, 0.22f);  // Marrom seco
+        Color lightSand = new Color(0.55f, 0.48f, 0.35f);  // Areia clara
+        Color darkDirt = new Color(0.25f, 0.18f, 0.1f);   // Terra escura
+        Color rockGray = new Color(0.45f, 0.43f, 0.38f);  // Pedra
+        Color rockDark = new Color(0.3f, 0.28f, 0.25f);
+
+        float ox = Random.Range(0f, 1000f);
+        float oy = Random.Range(0f, 1000f);
+
+        for (int y = 0; y < TEX_SIZE; y++)
+        {
+            for (int x = 0; x < TEX_SIZE; x++)
+            {
+                float nx = (float)x / TEX_SIZE;
+                float ny = (float)y / TEX_SIZE;
+
+                // Base: dirt with variation
+                float n1 = Mathf.PerlinNoise((nx + ox) * 5f, (ny + oy) * 5f);
+                float n2 = Mathf.PerlinNoise((nx + ox) * 15f, (ny + oy) * 15f) * 0.35f;
+                float n3 = Mathf.PerlinNoise((nx + ox) * 40f, (ny + oy) * 40f) * 0.15f;
+                float noise = n1 + n2 + n3;
+
+                Color col = Color.Lerp(darkDirt, lightSand, noise);
+                col = Color.Lerp(col, baseDirt, 0.4f);
+
+                // Rocks embedded in dirt
+                float worley = SimulateWorley(nx * 25f + ox, ny * 25f + oy);
+                if (worley < 0.15f)
+                {
+                    float rockBlend = 1f - (worley / 0.15f);
+                    col = Color.Lerp(col, rockGray, rockBlend * 0.7f);
+                    // Rock surface detail
+                    float rockDetail = Mathf.PerlinNoise((nx + ox) * 150f, (ny + oy) * 150f);
+                    col = Color.Lerp(col, rockDark, rockDetail * rockBlend * 0.3f);
+                }
+
+                // Cracks in dry dirt
+                float crack1 = Mathf.PerlinNoise((nx + ox) * 80f, (ny + oy) * 3f);
+                float crack2 = Mathf.PerlinNoise((nx + ox) * 3f, (ny + oy) * 80f);
+                if (crack1 > 0.78f || crack2 > 0.8f)
+                    col = Color.Lerp(col, darkDirt, 0.4f);
+
+                // Fine grain
+                float grain = Mathf.PerlinNoise((nx + ox) * 300f, (ny + oy) * 300f) * 0.06f - 0.03f;
+                col.r += grain; col.g += grain * 0.8f; col.b += grain * 0.5f;
+
+                col.a = 1f;
+                tex.SetPixel(x, y, col);
+            }
+        }
+
+        tex.Apply(true);
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Repeat;
+        return tex;
+    }
+
+    /// <summary>
+    /// Grama seca/morta estilo fazenda — amarela/marrom.
+    /// </summary>
+    public static Texture2D GenerateDriedGrassTexture()
+    {
+        Texture2D tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, true);
+        tex.name = "T_DriedGrass_RDR2";
+        Color baseYellow = new Color(0.48f, 0.42f, 0.2f);
+        Color dryBrown = new Color(0.35f, 0.28f, 0.12f);
+        Color lightStraw = new Color(0.6f, 0.55f, 0.3f);
+        Color greenHint = new Color(0.3f, 0.35f, 0.15f);
+
+        float ox = Random.Range(0f, 1000f);
+        float oy = Random.Range(0f, 1000f);
+
+        for (int y = 0; y < TEX_SIZE; y++)
+        {
+            for (int x = 0; x < TEX_SIZE; x++)
+            {
+                float nx = (float)x / TEX_SIZE;
+                float ny = (float)y / TEX_SIZE;
+
+                float n1 = Mathf.PerlinNoise((nx + ox) * 10f, (ny + oy) * 10f);
+                float n2 = Mathf.PerlinNoise((nx + ox) * 30f, (ny + oy) * 30f) * 0.3f;
+
+                // Blades direction feel
+                float blade = Mathf.PerlinNoise((nx + ox) * 150f, (ny + oy) * 8f);
+                float bladeV = Mathf.PerlinNoise((nx + ox) * 8f, (ny + oy) * 150f) * 0.5f;
+
+                float noise = n1 + n2;
+                Color col = Color.Lerp(dryBrown, lightStraw, noise);
+                col = Color.Lerp(col, baseYellow, 0.3f);
+
+                // Occasional green patches
+                float greenPatch = Mathf.PerlinNoise((nx + ox) * 4f, (ny + oy) * 4f);
+                if (greenPatch > 0.7f)
+                    col = Color.Lerp(col, greenHint, (greenPatch - 0.7f) * 1.5f);
+
+                // Blade detail
+                float bladeDetail = (blade + bladeV) * 0.5f;
+                col = Color.Lerp(col, dryBrown, bladeDetail * 0.15f);
+
+                col.a = 1f;
+                tex.SetPixel(x, y, col);
+            }
+        }
+
+        tex.Apply(true);
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Repeat;
+        return tex;
+    }
+
+    /// <summary>
+    /// Cascalho / pedregulho — terreno rochoso estilo RDR2.
+    /// </summary>
+    public static Texture2D GenerateGravelTexture()
+    {
+        Texture2D tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, true);
+        tex.name = "T_Gravel_RDR2";
+        Color baseGravel = new Color(0.38f, 0.35f, 0.3f);
+        Color lightGravel = new Color(0.52f, 0.48f, 0.42f);
+        Color darkGravel = new Color(0.22f, 0.2f, 0.17f);
+        Color dirtBetween = new Color(0.32f, 0.25f, 0.15f);
+
+        float ox = Random.Range(0f, 1000f);
+        float oy = Random.Range(0f, 1000f);
+
+        for (int y = 0; y < TEX_SIZE; y++)
+        {
+            for (int x = 0; x < TEX_SIZE; x++)
+            {
+                float nx = (float)x / TEX_SIZE;
+                float ny = (float)y / TEX_SIZE;
+
+                // Worley for pebble pattern
+                float worley1 = SimulateWorley(nx * 40f + ox, ny * 40f + oy);
+                float worley2 = SimulateWorley(nx * 20f + ox * 1.3f, ny * 20f + oy * 1.3f);
+
+                Color col;
+                if (worley1 < 0.08f)
+                {
+                    // Pebble surface
+                    float pebbleDetail = Mathf.PerlinNoise((nx + ox) * 100f, (ny + oy) * 100f);
+                    col = Color.Lerp(baseGravel, lightGravel, pebbleDetail);
+                }
+                else if (worley1 < 0.15f)
+                {
+                    // Pebble edge
+                    col = Color.Lerp(darkGravel, baseGravel, (worley1 - 0.08f) / 0.07f);
+                }
+                else
+                {
+                    // Dirt between pebbles
+                    float dirtNoise = Mathf.PerlinNoise((nx + ox) * 30f, (ny + oy) * 30f);
+                    col = Color.Lerp(dirtBetween, darkGravel, dirtNoise * 0.3f + worley2 * 0.2f);
+                }
+
+                // Grain
+                float grain = Mathf.PerlinNoise((nx + ox) * 250f, (ny + oy) * 250f) * 0.04f - 0.02f;
+                col.r += grain; col.g += grain; col.b += grain;
+
+                col.a = 1f;
+                tex.SetPixel(x, y, col);
+            }
+        }
+
+        tex.Apply(true);
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Repeat;
+        return tex;
+    }
+
+    /// <summary>
+    /// Sandy path — caminho de areia/poeira.
+    /// </summary>
+    public static Texture2D GenerateSandyPathTexture()
+    {
+        Texture2D tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, true);
+        tex.name = "T_SandyPath_RDR2";
+        Color baseSand = new Color(0.52f, 0.45f, 0.32f);
+        Color lightSand = new Color(0.62f, 0.55f, 0.4f);
+        Color darkSand = new Color(0.38f, 0.32f, 0.2f);
+
+        float ox = Random.Range(0f, 1000f);
+        float oy = Random.Range(0f, 1000f);
+
+        for (int y = 0; y < TEX_SIZE; y++)
+        {
+            for (int x = 0; x < TEX_SIZE; x++)
+            {
+                float nx = (float)x / TEX_SIZE;
+                float ny = (float)y / TEX_SIZE;
+
+                float n1 = Mathf.PerlinNoise((nx + ox) * 8f, (ny + oy) * 8f);
+                float n2 = Mathf.PerlinNoise((nx + ox) * 25f, (ny + oy) * 25f) * 0.3f;
+                float n3 = Mathf.PerlinNoise((nx + ox) * 80f, (ny + oy) * 80f) * 0.1f;
+
+                float noise = n1 + n2 + n3;
+                Color col = Color.Lerp(darkSand, lightSand, noise);
+                col = Color.Lerp(col, baseSand, 0.3f);
+
+                // Wheel tracks / footprints feel
+                float track = Mathf.PerlinNoise((nx + ox) * 4f, (ny + oy) * 60f);
+                if (track > 0.6f)
+                    col = Color.Lerp(col, darkSand, (track - 0.6f) * 0.5f);
+
+                // Fine particles
+                float fine = Mathf.PerlinNoise((nx + ox) * 400f, (ny + oy) * 400f) * 0.03f - 0.015f;
+                col.r += fine; col.g += fine * 0.9f; col.b += fine * 0.6f;
+
+                col.a = 1f;
+                tex.SetPixel(x, y, col);
+            }
+        }
+
+        tex.Apply(true);
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Repeat;
+        return tex;
+    }
 }

@@ -120,6 +120,26 @@ public class PlayerController : MonoBehaviour
 
     #endregion
 
+    #region Direct Input Methods (chamados por DirectInputHandler)
+
+    public void SetMoveInput(Vector2 input) => moveInput = input;
+    public void SetRunning(bool running) => isRunning = running;
+
+    public void TryDodge()
+    {
+        if (!isDodging) StartDodge();
+    }
+
+    public void TryJump()
+    {
+        if (isGrounded)
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+    }
+
+    public void TryToggleLockOn() => ToggleLockOn();
+
+    #endregion
+
     #region Movement
 
     private void HandleMovement()

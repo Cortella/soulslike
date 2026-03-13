@@ -205,6 +205,19 @@ public class PlayerCombat : MonoBehaviour
         isAttacking = false;
     }
 
+    #region Direct Input Methods (chamados por DirectInputHandler)
+
+    public void TryLightAttack() => PerformLightAttack();
+    public void TryHeavyAttack() => PerformHeavyAttack();
+
+    public void SetBlocking(bool blocking)
+    {
+        if (blocking && !isBlocking) StartBlock();
+        else if (!blocking && isBlocking) EndBlock();
+    }
+
+    #endregion
+
     private void OnDrawGizmosSelected()
     {
         if (attackPoint == null) return;
