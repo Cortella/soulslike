@@ -105,10 +105,10 @@ public class GameManager : MonoBehaviour
         PlayerController pc = FindFirstObjectByType<PlayerController>();
         if (pc != null)
         {
-            CharacterController cc = pc.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = false;
+            Rigidbody rb = pc.GetComponent<Rigidbody>();
+            if (rb != null) rb.isKinematic = true;
             pc.transform.position = lastBonfirePosition;
-            if (cc != null) cc.enabled = true;
+            if (rb != null) rb.isKinematic = false;
         }
 
         // Restaurar vida

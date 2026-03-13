@@ -615,4 +615,130 @@ public static class ProceduralTextureGenerator
         tex.wrapMode = TextureWrapMode.Repeat;
         return tex;
     }
+
+    // =================== LIURNIA TEXTURES ====================
+
+    /// <summary>
+    /// Grama pálida azul-esverdeada para Liurnia.
+    /// </summary>
+    public static Texture2D GenerateMoonlitGrassTexture()
+    {
+        Texture2D tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, true);
+        tex.name = "T_MoonlitGrass";
+        Color baseCol = new Color(0.25f, 0.35f, 0.22f);
+        Color paleCol = new Color(0.35f, 0.42f, 0.32f);
+        Color blueCol = new Color(0.2f, 0.3f, 0.35f);
+        float ox = Random.Range(0f, 1000f), oy = Random.Range(0f, 1000f);
+
+        for (int y = 0; y < TEX_SIZE; y++)
+            for (int x = 0; x < TEX_SIZE; x++)
+            {
+                float nx = (float)x / TEX_SIZE, ny = (float)y / TEX_SIZE;
+                float n1 = Mathf.PerlinNoise((nx + ox) * 10f, (ny + oy) * 10f);
+                float n2 = Mathf.PerlinNoise((nx + ox) * 30f, (ny + oy) * 30f) * 0.3f;
+                float n3 = Mathf.PerlinNoise((nx + ox) * 80f, (ny + oy) * 80f) * 0.15f;
+                float n = n1 + n2 + n3;
+                Color col = Color.Lerp(baseCol, paleCol, n);
+                col = Color.Lerp(col, blueCol, Mathf.Clamp01(n2 * 2f) * 0.25f);
+                float micro = Mathf.PerlinNoise((nx + ox) * 200f, (ny + oy) * 200f) * 0.06f;
+                col.r += micro; col.g += micro; col.b += micro * 1.5f;
+                col.a = 1f;
+                tex.SetPixel(x, y, col);
+            }
+
+        tex.Apply(true); tex.filterMode = FilterMode.Bilinear; tex.wrapMode = TextureWrapMode.Repeat;
+        return tex;
+    }
+
+    /// <summary>
+    /// Pedra antiga cinza-prateada para Liurnia.
+    /// </summary>
+    public static Texture2D GenerateAncientStoneTexture()
+    {
+        Texture2D tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, true);
+        tex.name = "T_AncientStone";
+        Color baseGrey = new Color(0.45f, 0.45f, 0.48f);
+        Color darkGrey = new Color(0.3f, 0.3f, 0.33f);
+        Color lightGrey = new Color(0.6f, 0.58f, 0.55f);
+        float ox = Random.Range(0f, 1000f), oy = Random.Range(0f, 1000f);
+
+        for (int y = 0; y < TEX_SIZE; y++)
+            for (int x = 0; x < TEX_SIZE; x++)
+            {
+                float nx = (float)x / TEX_SIZE, ny = (float)y / TEX_SIZE;
+                float n1 = Mathf.PerlinNoise((nx + ox) * 6f, (ny + oy) * 6f);
+                float n2 = Mathf.PerlinNoise((nx + ox) * 25f, (ny + oy) * 25f) * 0.35f;
+                float veins = Mathf.PerlinNoise((nx + ox) * 50f, (ny + oy) * 15f) * 0.2f;
+                float n = n1 + n2 + veins;
+                Color col = Color.Lerp(darkGrey, lightGrey, n);
+                col = Color.Lerp(col, baseGrey, 0.3f);
+                float crack = Mathf.PerlinNoise((nx + ox) * 120f, (ny + oy) * 120f);
+                if (crack > 0.78f) col = Color.Lerp(col, darkGrey, (crack - 0.78f) * 4f);
+                col.a = 1f;
+                tex.SetPixel(x, y, col);
+            }
+
+        tex.Apply(true); tex.filterMode = FilterMode.Bilinear; tex.wrapMode = TextureWrapMode.Repeat;
+        return tex;
+    }
+
+    /// <summary>
+    /// Areia pálida/creme para margens do lago.
+    /// </summary>
+    public static Texture2D GeneratePaleSandTexture()
+    {
+        Texture2D tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, true);
+        tex.name = "T_PaleSand";
+        Color baseSand = new Color(0.6f, 0.55f, 0.45f);
+        Color lightSand = new Color(0.7f, 0.65f, 0.55f);
+        Color darkSand = new Color(0.48f, 0.43f, 0.35f);
+        float ox = Random.Range(0f, 1000f), oy = Random.Range(0f, 1000f);
+
+        for (int y = 0; y < TEX_SIZE; y++)
+            for (int x = 0; x < TEX_SIZE; x++)
+            {
+                float nx = (float)x / TEX_SIZE, ny = (float)y / TEX_SIZE;
+                float n1 = Mathf.PerlinNoise((nx + ox) * 12f, (ny + oy) * 12f);
+                float n2 = Mathf.PerlinNoise((nx + ox) * 40f, (ny + oy) * 40f) * 0.25f;
+                float n3 = Mathf.PerlinNoise((nx + ox) * 100f, (ny + oy) * 100f) * 0.1f;
+                float n = n1 + n2 + n3;
+                Color col = Color.Lerp(darkSand, lightSand, n);
+                col = Color.Lerp(col, baseSand, 0.3f);
+                col.a = 1f;
+                tex.SetPixel(x, y, col);
+            }
+
+        tex.Apply(true); tex.filterMode = FilterMode.Bilinear; tex.wrapMode = TextureWrapMode.Repeat;
+        return tex;
+    }
+
+    /// <summary>
+    /// Fundo do lago — lama azul-acinzentada.
+    /// </summary>
+    public static Texture2D GenerateLakeBedTexture()
+    {
+        Texture2D tex = new Texture2D(TEX_SIZE, TEX_SIZE, TextureFormat.RGBA32, true);
+        tex.name = "T_LakeBed";
+        Color baseMud = new Color(0.18f, 0.2f, 0.28f);
+        Color darkMud = new Color(0.1f, 0.12f, 0.18f);
+        Color lightMud = new Color(0.25f, 0.27f, 0.32f);
+        float ox = Random.Range(0f, 1000f), oy = Random.Range(0f, 1000f);
+
+        for (int y = 0; y < TEX_SIZE; y++)
+            for (int x = 0; x < TEX_SIZE; x++)
+            {
+                float nx = (float)x / TEX_SIZE, ny = (float)y / TEX_SIZE;
+                float n1 = Mathf.PerlinNoise((nx + ox) * 8f, (ny + oy) * 8f);
+                float n2 = Mathf.PerlinNoise((nx + ox) * 20f, (ny + oy) * 20f) * 0.3f;
+                float peb = SimulateWorley(nx * 25f + ox, ny * 25f + oy) * 0.15f;
+                float n = n1 + n2 + peb;
+                Color col = Color.Lerp(darkMud, lightMud, n);
+                col = Color.Lerp(col, baseMud, 0.3f);
+                col.a = 1f;
+                tex.SetPixel(x, y, col);
+            }
+
+        tex.Apply(true); tex.filterMode = FilterMode.Bilinear; tex.wrapMode = TextureWrapMode.Repeat;
+        return tex;
+    }
 }

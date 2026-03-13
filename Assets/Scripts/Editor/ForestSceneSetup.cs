@@ -249,13 +249,26 @@ public class ForestSceneSetup : MonoBehaviour
         player.transform.position = spawnPos;
         player.tag = "Player";
 
-        // CharacterController
-        CharacterController cc = player.AddComponent<CharacterController>();
-        cc.height = 1.8f;
-        cc.radius = 0.35f;
-        cc.center = new Vector3(0, 0.9f, 0);
-        cc.slopeLimit = 45f;
-        cc.stepOffset = 0.4f;
+        // Rigidbody (física real)
+        Rigidbody rb = player.AddComponent<Rigidbody>();
+        rb.mass = 70f;
+        rb.freezeRotation = true;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+        // CapsuleCollider
+        CapsuleCollider capsule = player.AddComponent<CapsuleCollider>();
+        capsule.height = 1.8f;
+        capsule.radius = 0.35f;
+        capsule.center = new Vector3(0, 0.9f, 0);
+
+        // Sem fricção (evitar grudar em paredes)
+        PhysicMaterial noFriction = new PhysicMaterial("PlayerPhysMat");
+        noFriction.dynamicFriction = 0f;
+        noFriction.staticFriction = 0f;
+        noFriction.bounciness = 0f;
+        noFriction.frictionCombine = PhysicMaterialCombine.Minimum;
+        capsule.material = noFriction;
 
         // Modelo visual do cavaleiro (mesh HQ com texturas)
         GameObject knightModel = HighQualityKnightGenerator.CreateKnight(Vector3.zero);

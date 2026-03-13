@@ -158,15 +158,26 @@ public class SoulslikeSceneSetup : MonoBehaviour
         playerMat.SetFloat("_Smoothness", 0.5f);
         rend.material = playerMat;
 
-        // Remover collider da primitiva e adicionar CharacterController
+        // Remover collider da primitiva e adicionar Rigidbody + CapsuleCollider
         DestroyImmediate(player.GetComponent<CapsuleCollider>());
 
-        CharacterController cc = player.AddComponent<CharacterController>();
-        cc.height = 2f;
-        cc.radius = 0.4f;
-        cc.center = Vector3.up * 1f;
-        cc.slopeLimit = 45f;
-        cc.stepOffset = 0.5f;
+        Rigidbody rb = player.AddComponent<Rigidbody>();
+        rb.mass = 70f;
+        rb.freezeRotation = true;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+        CapsuleCollider capsule = player.AddComponent<CapsuleCollider>();
+        capsule.height = 2f;
+        capsule.radius = 0.4f;
+        capsule.center = Vector3.up * 1f;
+
+        PhysicMaterial noFriction = new PhysicMaterial("PlayerPhysMat");
+        noFriction.dynamicFriction = 0f;
+        noFriction.staticFriction = 0f;
+        noFriction.bounciness = 0f;
+        noFriction.frictionCombine = PhysicMaterialCombine.Minimum;
+        capsule.material = noFriction;
 
         // Scripts
         player.AddComponent<PlayerStats>();

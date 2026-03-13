@@ -32,7 +32,7 @@ public class GPURenderOptimizer : MonoBehaviour
         
         float elapsed = (float)EditorApplication.timeSinceStartup - start;
         
-        EditorSceneManager.MarkSceneDirty(
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
             UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
         
         Debug.Log($"=== GPU OPTIMIZATION COMPLETE ({elapsed:F1}s) ===");
@@ -314,6 +314,14 @@ public class GPURenderOptimizer : MonoBehaviour
         ConfigureQualityForPerformance();
 
         // Aplicar static batching nos objetos marcados
-        StaticBatchingUtility.Combine(gameObject.scene.GetRootGameObjects()[0]);
+        GameObject[] rootObjects = gameObject.scene.GetRootGameObjects();
+        if (rootObjects != null && rootObjects.Length > 0)
+        {
+            foreach (var root in rootObjects)
+            {
+                if (root != null)
+                    StaticBatchingUtility.Combine(root);
+            }
+        }
     }
 }

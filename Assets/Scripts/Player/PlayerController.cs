@@ -1,57 +1,92 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// Controlador do jogador estilo Soulslike — terceira pessoa com 
-/// movimento, dodge roll e gravidade.
-/// Usa o novo Input System.
+/// Controlador do jogador com física Rigidbody realista.
+/// Gravidade real do mundo, colisão física, momentum, slope handling.
+/// Funciona com WASD via DirectInputHandler.
 /// </summary>
-[RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(CapsuleCollider))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Movimento")]
-    public float walkSpeed = 3.5f;
-    public float runSpeed = 6f;
-    public float rotationSpeed = 12f;
-    public float gravity = -20f;
-    public float jumpHeight = 1.2f;
+    public float walkSpeed = 4.5f;
+    public float runSpeed = 7.5f;
+    public float rotationSpeed = 14f;
+    public float acceleration = 65f;
+    public float deceleration = 50f;
+
+    [Header("Pulo")]
+    public float jumpForce = 7.5f;
+    public float airControlFactor = 0.4f;
+    public float fallGravityMultiplier = 2.5f;
+
+    [Header("Ground Check")]
+    public float groundCheckRadius = 0.28f;
+    public float groundCheckOffset = 0.1f;
+    public LayerMask groundLayers = ~0;
+
+    [Header("Slopes")]
+    public float maxSlopeAngle = 50f;
 
     [Header("Dodge / Roll")]
-    public float dodgeSpeed = 8f;
-    public float dodgeDuration = 0.5f;
+    public float dodgeSpeed = 11f;
+    public float dodgeDuration = 0.4f;
     public float dodgeStaminaCost = 20f;
     public float dodgeInvulnerabilityTime = 0.3f;
 
     [Header("Referências")]
     public Transform cameraTransform;
 
-    // Componentes
-    private CharacterController characterController;
+    // Components
+    private Rigidbody rb;
+    private CapsuleCollider capsule;
     private PlayerStats playerStats;
     private PlayerCombat playerCombat;
 
-    // Estado interno
+    // Input state
     private Vector2 moveInput;
-    private Vector3 velocity;
     private bool isRunning;
+
+    // Physics state
+    private bool isGrounded;
     private bool isDodging;
     private float dodgeTimer;
     private Vector3 dodgeDirection;
-    private bool isGrounded;
+    private Vector3 groundNormal = Vector3.up;
+    private float groundCheckDist;
 
     // Lock-on
     public Transform lockOnTarget;
     public bool IsLockedOn => lockOnTarget != null;
 
-    // Propriedades públicas
+    // Public state
     public bool IsDodging => isDodging;
+    public bool IsGrounded => isGrounded;
     public Vector3 MoveDirection { get; private set; }
 
     private void Awake()
     {
-        characterController = GetComponent<CharacterController>();
+        rb = GetComponent<Rigidbody>();
+        capsule = GetComponent<CapsuleCollider>();
         playerStats = GetComponent<PlayerStats>();
         playerCombat = GetComponent<PlayerCombat>();
+
+        // Rigidbody para controle de personagem
+        rb.freezeRotation = true;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        rb.mass = 70f; // 70kg — peso realista
+
+        // Sem fricção nas paredes (evita grudar)
+        PhysicsMaterial noFriction = new PhysicsMaterial("PlayerNoFriction");
+        noFriction.dynamicFriction = 0f;
+        noFriction.staticFriction = 0f;
+        noFriction.bounciness = 0f;
+        noFriction.frictionCombine = PhysicsMaterialCombine.Minimum;
+        capsule.material = noFriction;
+
+        groundCheckDist = capsule.height * 0.5f - capsule.radius + groundCheckOffset;
     }
 
     private void Start()
@@ -63,80 +98,30 @@ public class PlayerController : MonoBehaviour
         Cursor.visible = false;
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
         if (playerStats != null && playerStats.IsDead) return;
 
-        isGrounded = characterController.isGrounded;
+        PerformGroundCheck();
 
         if (isDodging)
-        {
             HandleDodge();
-        }
         else
-        {
             HandleMovement();
-        }
 
-        ApplyGravity();
-        characterController.Move(velocity * Time.deltaTime);
+        ApplyExtraGravity();
     }
 
-    #region Input Callbacks (conectar via PlayerInput component ou Input Actions)
+    #region Ground Check
 
-    public void OnMove(InputAction.CallbackContext context)
+    private void PerformGroundCheck()
     {
-        moveInput = context.ReadValue<Vector2>();
+        Vector3 origin = transform.position + capsule.center;
+        isGrounded = Physics.SphereCast(origin, groundCheckRadius, Vector3.down,
+            out RaycastHit hit, groundCheckDist, groundLayers, QueryTriggerInteraction.Ignore);
+
+        groundNormal = isGrounded ? hit.normal : Vector3.up;
     }
-
-    public void OnRun(InputAction.CallbackContext context)
-    {
-        isRunning = context.performed;
-    }
-
-    public void OnDodge(InputAction.CallbackContext context)
-    {
-        if (context.started && !isDodging)
-        {
-            StartDodge();
-        }
-    }
-
-    public void OnJump(InputAction.CallbackContext context)
-    {
-        if (context.started && isGrounded)
-        {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-        }
-    }
-
-    public void OnLockOn(InputAction.CallbackContext context)
-    {
-        if (context.started)
-        {
-            ToggleLockOn();
-        }
-    }
-
-    #endregion
-
-    #region Direct Input Methods (chamados por DirectInputHandler)
-
-    public void SetMoveInput(Vector2 input) => moveInput = input;
-    public void SetRunning(bool running) => isRunning = running;
-
-    public void TryDodge()
-    {
-        if (!isDodging) StartDodge();
-    }
-
-    public void TryJump()
-    {
-        if (isGrounded)
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-    }
-
-    public void TryToggleLockOn() => ToggleLockOn();
 
     #endregion
 
@@ -148,50 +133,66 @@ public class PlayerController : MonoBehaviour
 
         if (inputDir.magnitude >= 0.1f)
         {
-            // Calcular direção relativa à câmera
+            // Direção relativa à câmera
             float targetAngle = Mathf.Atan2(inputDir.x, inputDir.z) * Mathf.Rad2Deg;
             if (cameraTransform != null)
                 targetAngle += cameraTransform.eulerAngles.y;
 
             MoveDirection = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
 
-            // Rotação suave
+            // Rotação
             if (!IsLockedOn)
             {
-                Quaternion targetRotation = Quaternion.LookRotation(MoveDirection);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation,
-                    rotationSpeed * Time.deltaTime);
+                Quaternion targetRot = Quaternion.LookRotation(MoveDirection);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot,
+                    rotationSpeed * Time.fixedDeltaTime);
             }
             else if (lockOnTarget != null)
             {
-                Vector3 dirToTarget = lockOnTarget.position - transform.position;
-                dirToTarget.y = 0;
-                if (dirToTarget.sqrMagnitude > 0.01f)
-                {
+                Vector3 toLock = lockOnTarget.position - transform.position;
+                toLock.y = 0;
+                if (toLock.sqrMagnitude > 0.01f)
                     transform.rotation = Quaternion.Slerp(transform.rotation,
-                        Quaternion.LookRotation(dirToTarget), rotationSpeed * Time.deltaTime);
-                }
+                        Quaternion.LookRotation(toLock), rotationSpeed * Time.fixedDeltaTime);
             }
 
             // Velocidade
             float speed = isRunning ? runSpeed : walkSpeed;
-
-            // Consumo de stamina ao correr
             if (isRunning && playerStats != null)
             {
-                if (!playerStats.HasStamina(5f * Time.deltaTime))
+                if (!playerStats.HasStamina(5f * Time.fixedDeltaTime))
                     speed = walkSpeed;
                 else
-                    playerStats.ConsumeStamina(5f * Time.deltaTime);
+                    playerStats.ConsumeStamina(5f * Time.fixedDeltaTime);
             }
 
-            velocity.x = MoveDirection.x * speed;
-            velocity.z = MoveDirection.z * speed;
+            // Controle reduzido no ar
+            float controlFactor = isGrounded ? 1f : airControlFactor;
+
+            // Projetar na inclinação quando no chão
+            Vector3 targetVel = MoveDirection * speed;
+            if (isGrounded)
+            {
+                float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
+                if (slopeAngle < maxSlopeAngle && slopeAngle > 1f)
+                    targetVel = Vector3.ProjectOnPlane(targetVel, groundNormal).normalized * speed;
+            }
+
+            // Aceleração suave (momentum realista)
+            Vector3 currentH = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
+            Vector3 targetH = new Vector3(targetVel.x, 0, targetVel.z);
+            Vector3 newH = Vector3.MoveTowards(currentH, targetH,
+                acceleration * controlFactor * Time.fixedDeltaTime);
+
+            rb.linearVelocity = new Vector3(newH.x, rb.linearVelocity.y, newH.z);
         }
         else
         {
-            velocity.x = 0f;
-            velocity.z = 0f;
+            // Desaceleração para parar (fricção)
+            Vector3 h = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
+            Vector3 decel = Vector3.MoveTowards(h, Vector3.zero,
+                deceleration * Time.fixedDeltaTime);
+            rb.linearVelocity = new Vector3(decel.x, rb.linearVelocity.y, decel.z);
             MoveDirection = Vector3.zero;
         }
     }
@@ -200,6 +201,18 @@ public class PlayerController : MonoBehaviour
 
     #region Dodge
 
+    private void HandleDodge()
+    {
+        dodgeTimer -= Time.fixedDeltaTime;
+        rb.linearVelocity = new Vector3(
+            dodgeDirection.x * dodgeSpeed,
+            rb.linearVelocity.y,
+            dodgeDirection.z * dodgeSpeed);
+
+        if (dodgeTimer <= 0f)
+            isDodging = false;
+    }
+
     private void StartDodge()
     {
         if (playerStats != null && !playerStats.HasStamina(dodgeStaminaCost)) return;
@@ -207,12 +220,11 @@ public class PlayerController : MonoBehaviour
         isDodging = true;
         dodgeTimer = dodgeDuration;
 
-        // Direção do dodge: se movendo, usa direção do movimento; senão, para trás
         if (moveInput.magnitude > 0.1f)
         {
-            float targetAngle = Mathf.Atan2(moveInput.x, moveInput.y) * Mathf.Rad2Deg;
-            if (cameraTransform != null) targetAngle += cameraTransform.eulerAngles.y;
-            dodgeDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward;
+            float angle = Mathf.Atan2(moveInput.x, moveInput.y) * Mathf.Rad2Deg;
+            if (cameraTransform != null) angle += cameraTransform.eulerAngles.y;
+            dodgeDirection = Quaternion.Euler(0, angle, 0) * Vector3.forward;
         }
         else
         {
@@ -220,31 +232,40 @@ public class PlayerController : MonoBehaviour
         }
 
         playerStats?.ConsumeStamina(dodgeStaminaCost);
-
-        // Iframes
-        if (playerStats != null)
-            playerStats.IsInvulnerable = true;
-
+        if (playerStats != null) playerStats.IsInvulnerable = true;
         Invoke(nameof(EndInvulnerability), dodgeInvulnerabilityTime);
-    }
-
-    private void HandleDodge()
-    {
-        dodgeTimer -= Time.deltaTime;
-
-        velocity.x = dodgeDirection.x * dodgeSpeed;
-        velocity.z = dodgeDirection.z * dodgeSpeed;
-
-        if (dodgeTimer <= 0f)
-        {
-            isDodging = false;
-        }
     }
 
     private void EndInvulnerability()
     {
-        if (playerStats != null)
-            playerStats.IsInvulnerable = false;
+        if (playerStats != null) playerStats.IsInvulnerable = false;
+    }
+
+    #endregion
+
+    #region Gravity
+
+    private void ApplyExtraGravity()
+    {
+        // Gravidade extra na queda para sensação mais responsiva
+        if (!isGrounded && rb.linearVelocity.y < 0)
+        {
+            rb.AddForce(Vector3.down * (fallGravityMultiplier - 1f) *
+                Mathf.Abs(Physics.gravity.y), ForceMode.Acceleration);
+        }
+
+        // Evitar deslizar em slopes quando parado
+        if (isGrounded && MoveDirection == Vector3.zero && !isDodging)
+        {
+            float slopeAngle = Vector3.Angle(groundNormal, Vector3.up);
+            if (slopeAngle > 2f && slopeAngle < maxSlopeAngle)
+            {
+                rb.linearVelocity = new Vector3(
+                    rb.linearVelocity.x,
+                    Mathf.Max(rb.linearVelocity.y, -0.5f),
+                    rb.linearVelocity.z);
+            }
+        }
     }
 
     #endregion
@@ -259,7 +280,6 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Achar inimigo mais próximo
         float maxRange = 25f;
         Collider[] hits = Physics.OverlapSphere(transform.position, maxRange);
         float closestDist = Mathf.Infinity;
@@ -283,19 +303,19 @@ public class PlayerController : MonoBehaviour
 
     #endregion
 
-    #region Gravity
+    #region Direct Input Methods (chamados por DirectInputHandler)
 
-    private void ApplyGravity()
+    public void SetMoveInput(Vector2 input) => moveInput = input;
+    public void SetRunning(bool running) => isRunning = running;
+    public void TryDodge() { if (!isDodging) StartDodge(); }
+
+    public void TryJump()
     {
-        if (isGrounded && velocity.y < 0f)
-        {
-            velocity.y = -2f;
-        }
-        else
-        {
-            velocity.y += gravity * Time.deltaTime;
-        }
+        if (isGrounded)
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
     }
+
+    public void TryToggleLockOn() => ToggleLockOn();
 
     #endregion
 }

@@ -16,7 +16,8 @@ public class AtmosphereSetup : MonoBehaviour
         DarkForest,
         BossArena,
         SafeZone,
-        Nighttime
+        Nighttime,
+        Liurnia
     }
 
     /// <summary>
@@ -160,6 +161,25 @@ public class AtmosphereSetup : MonoBehaviour
                 filmGrain.type.value = FilmGrainLookup.Medium6;
                 filmGrain.intensity.value = 0.4f;
                 chrAb.intensity.value = 0.08f;
+                break;
+
+            case AtmospherePreset.Liurnia:
+                // Lago místico — azul prateado, etéreo
+                vignette.intensity.value = 0.15f;
+                vignette.smoothness.value = 0.35f;
+                colorAdj.postExposure.value = 0.3f;
+                colorAdj.contrast.value = 12f;
+                colorAdj.saturation.value = -15f;
+                colorAdj.colorFilter.value = new Color(0.75f, 0.8f, 0.95f); // Azul prateado
+                lgg.lift.value = new Vector4(-0.01f, 0f, 0.04f, 0f); // Sombras azuis
+                lgg.gamma.value = new Vector4(0f, 0f, 0.015f, 0f);
+                lgg.gain.value = new Vector4(-0.01f, 0f, 0.02f, 0f);
+                bloom.intensity.value = 1.5f; // Bloom forte para brilho etéreo
+                bloom.tint.value = new Color(0.7f, 0.8f, 1f);
+                bloom.threshold.value = 0.7f; // Limiar baixo para mais glow
+                filmGrain.type.value = FilmGrainLookup.Thin1;
+                filmGrain.intensity.value = 0.08f;
+                chrAb.intensity.value = 0.02f;
                 break;
         }
     }
